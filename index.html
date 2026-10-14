@@ -291,6 +291,21 @@ window.hiloRojoWeb = {
 		e.prompt();
 		return true;
 	},
+	// Estadísticas anónimas (GoatCounter, sin cookies), sólo si la publicación las activa
+	// (tools/web/publicacion.json): partidas empezadas, finales conseguidos, instalaciones.
+	track: function (path, title) {
+		var gc = window.goatcounter;
+		if (gc && typeof gc.count === 'function') {
+			try {
+				gc.count({ path: path, title: title || path, event: true });
+			} catch (e) {
+				// Sin estadísticas no pasa nada.
+			}
+		}
+	},
+	analytics: function () {
+		return !!document.querySelector('script[data-goatcounter]');
+	},
 	// Color de la barra del navegador (Android) o de la pestaña (Safari): el de la pantalla en curso.
 	theme: function (hex) {
 		var m = document.querySelector('meta[name="theme-color"]');
@@ -370,7 +385,7 @@ window.addEventListener('appinstalled', function () {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":20190988,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":20192492,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
