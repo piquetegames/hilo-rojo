@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="theme-color" content="#C8321E">
+		<title>Hilo rojo · Sin conexión</title>
+		<style>
+html, body {
+	margin: 0;
+	height: 100%;
+	background: #1C1B1A;
+}
+
+main {
+	box-sizing: border-box;
+	max-width: 420px;
+	min-height: 100%;
+	margin: 0 auto;
+	padding: 48px 28px;
+	background: #C8321E;
+	color: #F1ECE2;
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+h1 {
+	font-size: 44px;
+	line-height: 0.95;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	margin: 0 0 20px;
+	text-transform: uppercase;
+}
+
+hr {
+	border: 0;
+	border-top: 2px solid #F1ECE2;
+	margin: 0 0 20px;
+}
+
+p {
+	font-size: 18px;
+	line-height: 1.4;
+	margin: 0 0 16px;
+}
+
+button {
+	margin-top: 24px;
+	width: 100%;
+	padding: 18px 20px;
+	border: 2px solid #F1ECE2;
+	background: transparent;
+	color: #F1ECE2;
+	font: inherit;
+	font-weight: 700;
+	font-size: 18px;
+	text-align: left;
+	cursor: pointer;
+}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Hilo<br>rojo</h1>
+			<hr>
+			<p>Estás sin conexión.</p>
+			<p>La primera vez hace falta Internet para descargar el juego. Después, si lo instalas en la pantalla de inicio, se puede jugar sin conexión.</p>
+			<button type="button">Volver a intentarlo →</button>
+		</main>
+		<script>
+document.querySelector('button').addEventListener('click', () => {
+	window.location.reload();
+});
+		</script>
+	</body>
+</html>

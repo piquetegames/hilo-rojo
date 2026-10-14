@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>Hilo rojo</title>
+		<meta name="description" content="Hilo rojo: simulador de decisiones sobre la historia de la lucha obrera en España, de 1840 a hoy.">
+		<meta name="theme-color" content="#C8321E">
+		<meta name="color-scheme" content="only light">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-title" content="Hilo rojo">
+		<meta name="format-detection" content="telephone=no">
+		<meta property="og:type" content="website">
+		<meta property="og:locale" content="es_ES">
+		<meta property="og:title" content="Hilo rojo">
+		<meta property="og:description" content="Historia de la lucha obrera en España, de 1840 a hoy: decide como sindicato en los grandes conflictos y descubre cómo terminaron de verdad.">
+		<meta property="og:image" content="index.compartir.png">
+		<meta property="og:image:width" content="1200">
+		<meta property="og:image:height" content="630">
+		<meta name="twitter:card" content="summary_large_image">
+		<style>
+/* Plantilla de la versión web de «Hilo rojo» (preset «Web», html/custom_html_shell).
+   La partida vive en una columna de móvil: a pantalla completa en el teléfono y, en pantallas
+   anchas, centrada sobre fondo carbón. --u es la unidad del diseño (1/720 del ancho de la columna). */
+:root {
+	--rojo: #C8321E;
+	--papel: #F1ECE2;
+	--carbon: #1C1B1A;
+	--u: 0.5px;
+	--col: 360px;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	background: var(--carbon);
+	overflow: hidden;
+	overscroll-behavior: none;
+	touch-action: none;
+	-webkit-text-size-adjust: 100%;
+}
+
+#canvas {
+	display: block;
+	margin: 0 auto;
+	border: 0;
+	outline: none;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* En pantallas anchas, la columna se separa del fondo con una sombra suave. */
+@media (min-aspect-ratio: 10/16) {
+	#canvas, #status {
+		box-shadow: 0 0 calc(64 * var(--u)) rgba(0, 0, 0, 0.55);
+	}
+}
+
+/* Pantalla de carga: la misma composición que la entrada del juego (rojo a sangre, puño en papel
+   desbordando por abajo y «Cargando» abajo a la derecha). El título aparece al arrancar el juego. */
+#status {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: var(--col);
+	transform: translateX(-50%);
+	background: var(--rojo);
+	overflow: hidden;
+	visibility: hidden;
+	font-family: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+	color: var(--papel);
+}
+
+#status-fist {
+	position: absolute;
+	left: calc(-30 * var(--u));
+	bottom: calc(-60 * var(--u));
+	width: calc(640 * var(--u));
+	height: calc(640 * var(--u));
+}
+
+#status-load {
+	position: absolute;
+	right: calc(24 * var(--u));
+	bottom: calc(50 * var(--u));
+	width: calc(180 * var(--u));
+}
+
+#status-label {
+	font-size: calc(20 * var(--u));
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: calc(8 * var(--u));
+}
+
+#status-track {
+	height: calc(6 * var(--u));
+	background: rgba(241, 236, 226, 0.35);
+}
+
+#status-fill {
+	height: 100%;
+	width: 0;
+	background: var(--papel);
+	transition: width 0.25s ease-out;
+}
+
+#status-notice {
+	display: none;
+	position: absolute;
+	left: calc(48 * var(--u));
+	right: calc(48 * var(--u));
+	top: calc(120 * var(--u));
+	font-size: calc(30 * var(--u));
+	line-height: 1.35;
+}
+
+#status-notice strong {
+	display: block;
+	font-size: calc(48 * var(--u));
+	margin-bottom: calc(20 * var(--u));
+}
+
+/* Móvil en horizontal: la columna quedaría diminuta; se pide girarlo (la app instalada ya va en
+   vertical en Android; en iPhone, no siempre). */
+#girar {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 10;
+	background: var(--rojo);
+	color: var(--papel);
+	font-family: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	gap: 14px;
+}
+
+#girar svg {
+	width: 64px;
+	height: 64px;
+	animation: girar 2.4s ease-in-out infinite;
+}
+
+#girar strong {
+	font-size: 22px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+#girar span {
+	font-size: 15px;
+	opacity: 0.85;
+}
+
+@keyframes girar {
+	0%, 25% { transform: rotate(-90deg); }
+	55%, 100% { transform: rotate(0deg); }
+}
+
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+	#girar {
+		display: flex;
+	}
+}
+		</style>
+		<script>
+// La página decide el tamaño del lienzo (html/canvas_resize_policy = Ninguna) y Godot escala con
+// «keep_width» sobre una base de 720 de ancho y 1040 de alto mínimo:
+//   · en un móvil o una tableta (puntero táctil), el juego ocupa todo el ancho mientras la pantalla
+//     tenga al menos 1040/720 de proporción (cabe hasta un iPhone SE con las barras de Safari);
+//   · con ratón, columna 9:16 como máximo, al alto de la ventana, centrada sobre fondo carbón.
+// Se recalcula al girar, al cambiar el tamaño o el zoom y al pasar a una pantalla con otra densidad.
+(function () {
+	var BASE_W = 720;
+	var MIN_H_TACTIL = 1040;
+	var MIN_H_RATON = 1280;
+	var busy = false;
+	var mq = null;
+	var last = { w: 0, h: 0 };
+	function typing() {
+		var a = document.activeElement;
+		return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+	}
+	function fit() {
+		if (busy) {
+			return;
+		}
+		var w = window.innerWidth;
+		var h = window.innerHeight;
+		// Con el teclado virtual abierto (buscador del glosario) no se encoge la columna: el teclado
+		// tapa la parte de abajo y el buscador está arriba.
+		if (typing() && w === last.w && h < last.h) {
+			return;
+		}
+		last.w = w;
+		last.h = h;
+		var tactil = window.matchMedia('(pointer: coarse)').matches;
+		var cw = Math.min(w, Math.floor(h * BASE_W / (tactil ? MIN_H_TACTIL : MIN_H_RATON)));
+		var dpr = window.devicePixelRatio || 1;
+		document.documentElement.style.setProperty('--u', (cw / BASE_W) + 'px');
+		document.documentElement.style.setProperty('--col', cw + 'px');
+		var c = document.getElementById('canvas');
+		if (!c) {
+			return;
+		}
+		c.style.width = cw + 'px';
+		c.style.height = h + 'px';
+		// Sólo si cambia: asignar el tamaño borra el lienzo, y el juego sólo redibuja cuando algo cambia.
+		var bw = Math.floor(cw * dpr);
+		var bh = Math.floor(h * dpr);
+		if (c.width !== bw || c.height !== bh) {
+			c.width = bw;
+			c.height = bh;
+			// Avisa a Godot del nuevo tamaño sin volver a entrar aquí.
+			busy = true;
+			window.dispatchEvent(new Event('resize'));
+			busy = false;
+		}
+		watchDensity();
+	}
+	function watchDensity() {
+		if (mq) {
+			mq.removeEventListener('change', fit);
+		}
+		mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+		mq.addEventListener('change', fit);
+	}
+	window.addEventListener('resize', fit);
+	window.addEventListener('orientationchange', fit);
+	document.addEventListener('focusout', function () {
+		setTimeout(fit, 300);
+	});
+	document.addEventListener('DOMContentLoaded', fit);
+	window.addEventListener('load', function () {
+		setTimeout(fit, 500);
+		setTimeout(fit, 2000);
+	});
+	// En pantallas táctiles, Godot ya recibe el arrastre del dedo por los eventos táctiles (y lo convierte
+	// en ratón, como en la app Android); el movimiento de puntero del navegador lo duplicaría y el scroll iría
+	// al doble de velocidad. El ratón de verdad sí pasa.
+	window.addEventListener('pointermove', function (e) {
+		if (e.pointerType !== 'mouse' && 'ontouchstart' in window) {
+			e.stopImmediatePropagation();
+		}
+	}, true);
+	// Safari de iPhone ignora user-scalable=no: sin zoom con dos dedos.
+	document.addEventListener('gesturestart', function (e) {
+		e.preventDefault();
+	});
+	window.hiloRojoFit = fit;
+}());
+
+// Puente con el juego (lo usa scripts/ui/web.gd mediante JavaScriptBridge).
+window.hiloRojoWeb = {
+	installEvent: null,
+	standalone: function () {
+		return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+	},
+	ios: function () {
+		return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	},
+	// '' si ya está instalada o no se puede; 'prompt' si el navegador ofrece instalarla (Chrome, Edge,
+	// Samsung Internet); 'ios' si hay que hacerlo a mano desde «Compartir».
+	installMode: function () {
+		if (this.standalone()) {
+			return '';
+		}
+		if (this.installEvent) {
+			return 'prompt';
+		}
+		return this.ios() ? 'ios' : '';
+	},
+	install: function () {
+		var e = this.installEvent;
+		if (!e) {
+			return false;
+		}
+		this.installEvent = null;
+		e.prompt();
+		return true;
+	},
+	// Color de la barra del navegador (Android) o de la pestaña (Safari): el de la pantalla en curso.
+	theme: function (hex) {
+		var m = document.querySelector('meta[name="theme-color"]');
+		if (m) {
+			m.setAttribute('content', hex);
+		}
+	},
+};
+window.addEventListener('beforeinstallprompt', function (e) {
+	window.hiloRojoWeb.installEvent = e;
+});
+window.addEventListener('appinstalled', function () {
+	window.hiloRojoWeb.installEvent = null;
+});
+
+// «Atrás» del móvil (botón o gesto) o del navegador = tecla Esc del juego, como el botón «atrás» de la
+// app Android: cierra la hoja abierta o vuelve a la pantalla anterior. Cada toque deja preparada una
+// entrada en el historial; si se pulsa «atrás» dos veces seguidas sin tocar nada, se sale de la página.
+(function () {
+	var armed = false;
+	function arm(e) {
+		if (armed || !e.isTrusted || !window.history.pushState) {
+			return;
+		}
+		window.history.pushState({ hiloRojo: true }, '');
+		armed = true;
+	}
+	window.addEventListener('pointerdown', arm, true);
+	window.addEventListener('keydown', arm, true);
+	window.addEventListener('popstate', function () {
+		armed = false;
+		var c = document.getElementById('canvas');
+		if (!c) {
+			return;
+		}
+		['keydown', 'keyup'].forEach(function (type) {
+			c.dispatchEvent(new KeyboardEvent(type, { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+		});
+	});
+}());
+		</script>
+		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+<link rel="manifest" href="index.manifest.json">
+
+	</head>
+	<body>
+		<canvas id="canvas">
+			Tu navegador no puede mostrar el juego.
+		</canvas>
+		<noscript>
+			Activa JavaScript para jugar a Hilo rojo.
+		</noscript>
+		<div id="status">
+			<svg id="status-fist" viewBox="0 0 100 100" aria-hidden="true">
+				<g fill="#F1ECE2">
+					<rect x="27" y="30" width="10" height="14"></rect><rect x="39" y="22" width="10" height="22"></rect>
+					<rect x="51" y="24" width="10" height="20"></rect><rect x="63" y="30" width="10" height="26"></rect>
+					<rect x="21" y="46" width="40" height="10"></rect><rect x="27" y="58" width="46" height="12"></rect>
+					<rect x="33" y="72" width="34" height="28"></rect>
+				</g>
+			</svg>
+			<div id="status-load">
+				<div id="status-label">Cargando</div>
+				<div id="status-track"><div id="status-fill"></div></div>
+			</div>
+			<div id="status-notice"></div>
+		</div>
+		<div id="girar" role="alert">
+			<svg viewBox="0 0 64 64" aria-hidden="true">
+				<rect x="18" y="4" width="28" height="56" rx="4" fill="none" stroke="#F1ECE2" stroke-width="4"></rect>
+				<rect x="27" y="51" width="10" height="3" fill="#F1ECE2"></rect>
+			</svg>
+			<strong>Gira el móvil</strong>
+			<span>Hilo rojo se juega en vertical.</span>
+		</div>
+
+		<script src="index.js"></script>
+		<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":20190988,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_THREADS_ENABLED = false;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusLoad = document.getElementById('status-load');
+	const statusFill = document.getElementById('status-fill');
+	const statusNotice = document.getElementById('status-notice');
+
+	let initializing = true;
+	let statusMode = '';
+
+	window.hiloRojoFit();
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusLoad.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(title, text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const strong = document.createElement('strong');
+		strong.textContent = title;
+		statusNotice.appendChild(strong);
+		text.split('\n').forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		const detail = err instanceof Error ? err.message : (typeof err === 'string' ? err : '');
+		setStatusNotice('No se ha podido cargar', 'Recarga la página. Si el problema sigue, prueba con otro navegador.' + (detail ? '\n\n(' + detail + ')' : ''));
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		setStatusNotice('Tu navegador no puede abrir el juego',
+			'Le falta: ' + missing.join(', ') + '.\nActualízalo o prueba con Chrome, Firefox o Safari recientes.');
+		setStatusMode('notice');
+		initializing = false;
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (current > 0 && total > 0) {
+					statusFill.style.width = Math.min(100, (100 * current) / total) + '%';
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+			keepData();
+			completeCache();
+		}, displayFailureNotice);
+	}
+
+	// Partidas y registro viven en el almacenamiento del navegador: se pide que no los borre si le
+	// falta espacio. Chrome, Edge y Safari lo deciden sin preguntar; Firefox mostraría un aviso, así
+	// que ahí no se pide.
+	function keepData() {
+		if (!navigator.storage || !navigator.storage.persist || /Firefox\//.test(navigator.userAgent)) {
+			return;
+		}
+		navigator.storage.persisted().then((done) => (done ? true : navigator.storage.persist())).catch(() => {});
+	}
+
+	// Ya cargado el juego, el service worker guarda en caché el motor y el juego para jugar sin conexión
+	// (en la primera visita no lo hace antes, para no descargarlos dos veces a la vez).
+	function completeCache() {
+		if (!('serviceWorker' in navigator)) {
+			return;
+		}
+		navigator.serviceWorker.ready.then((reg) => {
+			if (reg.active) {
+				reg.active.postMessage('completar');
+			}
+		}).catch(() => {});
+	}
+}());
+		</script>
+	</body>
+</html>
+

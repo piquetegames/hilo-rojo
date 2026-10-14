@@ -1,0 +1,44 @@
+{
+	"background_color": "#c8321e",
+	"display": "standalone",
+	"icons": [
+		{
+			"sizes": "144x144",
+			"src": "index.144x144.png",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"sizes": "180x180",
+			"src": "index.180x180.png",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"sizes": "512x512",
+			"src": "index.512x512.png",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "index.512x512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	],
+	"name": "Hilo rojo",
+	"orientation": "portrait",
+	"start_url": "./",
+	"id": "./",
+	"short_name": "Hilo rojo",
+	"description": "Historia de la lucha obrera en España, de 1840 a hoy.",
+	"lang": "es-ES",
+	"dir": "ltr",
+	"scope": "./",
+	"theme_color": "#c8321e",
+	"categories": [
+		"games",
+		"education"
+	]
+}
