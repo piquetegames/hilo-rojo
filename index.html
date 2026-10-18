@@ -174,6 +174,46 @@ html, body {
 		display: flex;
 	}
 }
+
+/* Navegador integrado de una red social (Instagram, Facebook, TikTok…): franja abajo, en la columna,
+   que explica que conviene abrir el juego en el navegador. Se cierra y no vuelve a salir. */
+#integrado {
+	display: none;
+	position: fixed;
+	bottom: 0;
+	left: 50%;
+	width: var(--col);
+	transform: translateX(-50%);
+	z-index: 5;
+	box-sizing: border-box;
+	padding: calc(24 * var(--u)) calc(24 * var(--u)) calc(28 * var(--u));
+	/* Filete claro arriba: la pantalla de entrada también es roja. */
+	border-top: calc(3 * var(--u)) solid var(--papel);
+	background: var(--rojo);
+	color: var(--papel);
+	font-family: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+	font-size: calc(26 * var(--u));
+	line-height: 1.35;
+}
+
+#integrado strong {
+	display: block;
+	font-size: calc(22 * var(--u));
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: calc(8 * var(--u));
+}
+
+#integrado button {
+	margin-top: calc(16 * var(--u));
+	padding: calc(14 * var(--u)) calc(28 * var(--u));
+	border: calc(3 * var(--u)) solid var(--papel);
+	background: transparent;
+	color: var(--papel);
+	font: inherit;
+	font-weight: 700;
+}
 		</style>
 		<script>
 // La página decide el tamaño del lienzo (html/canvas_resize_policy = Ninguna) y Godot escala con
@@ -306,6 +346,13 @@ window.hiloRojoWeb = {
 	analytics: function () {
 		return !!document.querySelector('script[data-goatcounter]');
 	},
+	// Nombre de la red social si el juego está en su navegador integrado; vacío en un navegador normal.
+	inAppBrowser: function (ua) {
+		const apps = [[/Instagram/, 'Instagram'], [/FBAN|FBAV|FB_IAB|FBIOS/, 'Facebook'], [/musical_ly|BytedanceWebview|TikTok/i, 'TikTok'],
+			[/LinkedInApp/, 'LinkedIn'], [/Snapchat/, 'Snapchat'], [/Twitter/, 'X'], [/\bLine\//, 'LINE'], [/MicroMessenger/, 'WeChat']];
+		const hit = apps.find((a) => a[0].test(ua || ''));
+		return hit ? hit[1] : '';
+	},
 	// Color de la barra del navegador (Android) o de la pestaña (Safari): el de la pantalla en curso.
 	theme: function (hex) {
 		var m = document.querySelector('meta[name="theme-color"]');
@@ -384,9 +431,15 @@ window.addEventListener('appinstalled', function () {
 			<span>Hilo rojo se juega en vertical.</span>
 		</div>
 
+		<div id="integrado" role="status">
+			<strong>Ábrelo en tu navegador</strong>
+			<span id="integrado-texto"></span>
+			<br><button type="button" id="integrado-cerrar">Entendido</button>
+		</div>
+
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":20192492,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":30845196,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -458,6 +511,7 @@ const engine = new Engine(GODOT_CONFIG);
 			setStatusMode('hidden');
 			keepData();
 			completeCache();
+			inAppNotice();
 		}, displayFailureNotice);
 	}
 
@@ -469,6 +523,34 @@ const engine = new Engine(GODOT_CONFIG);
 			return;
 		}
 		navigator.storage.persisted().then((done) => (done ? true : navigator.storage.persist())).catch(() => {});
+	}
+
+	// Navegador integrado de una red social: las partidas se guardan aparte de las del navegador
+	// habitual, no se puede instalar como app y puede que no funcione sin conexión. Se avisa una vez.
+	function inAppNotice() {
+		const app = window.hiloRojoWeb.inAppBrowser(navigator.userAgent);
+		let seen = false;
+		try {
+			seen = localStorage.getItem('hiloRojoAvisoIntegrado') === '1';
+		} catch (e) {
+			// Sin almacenamiento: se avisa igual.
+		}
+		if (!app || seen) {
+			return;
+		}
+		const box = document.getElementById('integrado');
+		document.getElementById('integrado-texto').textContent = 'Estás en el navegador de ' + app +
+			'. Aquí tus partidas no se guardan con las de tu navegador y no se puede instalar como app. Usa el menú de ' + app +
+			' para abrir Hilo rojo en Chrome o Safari.';
+		box.style.display = 'block';
+		document.getElementById('integrado-cerrar').addEventListener('click', () => {
+			box.style.display = 'none';
+			try {
+				localStorage.setItem('hiloRojoAvisoIntegrado', '1');
+			} catch (e) {
+				// Sin almacenamiento, vuelve a salir la próxima vez.
+			}
+		});
 	}
 
 	// Ya cargado el juego, el service worker guarda en caché el motor y el juego para jugar sin conexión
