@@ -12,7 +12,7 @@
 //     el navegador no acepta para abrir una página.
 'use strict';
 
-const VERSION = "1792331378272";
+const VERSION = "1792509834660";
 const PREFIX = "Hilo rojo-sw-cache-";
 const CACHE = PREFIX + VERSION;
 const PAGE = 'index.html';
@@ -23,7 +23,7 @@ const CORE = ["index.html","index.js","index.offline.html","index.icon.png","ind
 const HEAVY = ["index.wasm","index.pck"];
 const ALL = CORE.concat(HEAVY);
 // Huella de cada archivo de esta versión.
-const HASHES = {"index.html":"3d584db5c3662adb5fbba39ca6d6155e","index.js":"304c6a520d2dbc82062dc50ef6a695bf","index.offline.html":"14f82785dc6d902971b20997d11f1107","index.icon.png":"95fa94d3822e3e8099902b86019e70cc","index.apple-touch-icon.png":"b2af883edbaf2431581a1da395ff3500","index.audio.worklet.js":"c55ea38b7dbd5eb296a8353e7e360ae9","index.audio.position.worklet.js":"8a7370a54ea5758d957875cbeb24416c","index.manifest.json":"d1f10582988cb8733216388cbb068a46","index.144x144.png":"d5a49ac73c395efb1487b8d9fc6f5ba3","index.180x180.png":"63831cbe7194e722944a1d8ef9ff0da9","index.512x512.png":"720cfddeb65da1b02b1f500879d56c10","index.wasm":"83e2f97ab834d857572e3da40d56e70d","index.pck":"5975f1cab611e70baf8646a605d240bb"};
+const HASHES = {"index.html":"68ac8be0a390adaba98547819fc763ce","index.js":"304c6a520d2dbc82062dc50ef6a695bf","index.offline.html":"14f82785dc6d902971b20997d11f1107","index.icon.png":"95fa94d3822e3e8099902b86019e70cc","index.apple-touch-icon.png":"b2af883edbaf2431581a1da395ff3500","index.audio.worklet.js":"c55ea38b7dbd5eb296a8353e7e360ae9","index.audio.position.worklet.js":"8a7370a54ea5758d957875cbeb24416c","index.manifest.json":"d1f10582988cb8733216388cbb068a46","index.144x144.png":"d5a49ac73c395efb1487b8d9fc6f5ba3","index.180x180.png":"63831cbe7194e722944a1d8ef9ff0da9","index.512x512.png":"720cfddeb65da1b02b1f500879d56c10","index.wasm":"83e2f97ab834d857572e3da40d56e70d","index.pck":"c1587c155e1b9e86efebec9923c96ea6"};
 const HASH_HEADER = 'X-Hilo-Rojo-Huella';
 
 // Copia de la respuesta con su huella (y sin la marca de redirección).

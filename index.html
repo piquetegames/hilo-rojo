@@ -205,14 +205,32 @@ html, body {
 	margin-bottom: calc(8 * var(--u));
 }
 
-#integrado button {
+#integrado .acciones {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(12 * var(--u));
 	margin-top: calc(16 * var(--u));
+}
+
+#integrado button,
+#integrado a {
 	padding: calc(14 * var(--u)) calc(28 * var(--u));
 	border: calc(3 * var(--u)) solid var(--papel);
 	background: transparent;
 	color: var(--papel);
 	font: inherit;
 	font-weight: 700;
+	text-decoration: none;
+}
+
+/* La acción principal (abrir en Chrome, copiar el enlace), rellena. */
+#integrado .principal {
+	background: var(--papel);
+	color: var(--rojo);
+}
+
+#integrado [hidden] {
+	display: none;
 }
 		</style>
 		<script>
@@ -312,10 +330,14 @@ window.hiloRojoWeb = {
 		return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 	},
 	// '' si ya está instalada o no se puede; 'prompt' si el navegador ofrece instalarla (Chrome, Edge,
-	// Samsung Internet); 'ios' si hay que hacerlo a mano desde «Compartir».
+	// Samsung Internet); 'ios' si hay que hacerlo a mano desde «Compartir»; 'external' si es el navegador
+	// integrado de una red social, donde no se puede: hay que abrirla antes en un navegador de verdad.
 	installMode: function () {
 		if (this.standalone()) {
 			return '';
+		}
+		if (this.inAppBrowser(navigator.userAgent)) {
+			return 'external';
 		}
 		if (this.installEvent) {
 			return 'prompt';
@@ -352,6 +374,74 @@ window.hiloRojoWeb = {
 			[/LinkedInApp/, 'LinkedIn'], [/Snapchat/, 'Snapchat'], [/Twitter/, 'X'], [/\bLine\//, 'LINE'], [/MicroMessenger/, 'WeChat']];
 		const hit = apps.find((a) => a[0].test(ua || ''));
 		return hit ? hit[1] : '';
+	},
+	// Dirección del juego, sin parámetros ni fragmento.
+	gameUrl: function () {
+		return location.origin + location.pathname;
+	},
+	// En Android, un enlace «intent:» abre la misma dirección en Chrome (si no está, se queda aquí).
+	chromeIntent: function () {
+		return 'intent://' + location.host + location.pathname + '#Intent;scheme=' + location.protocol.replace(':', '') + ';package=com.android.chrome;S.browser_fallback_url=' +
+			encodeURIComponent(this.gameUrl()) + ';end';
+	},
+	// Aviso del navegador integrado, en HTML (sólo un toque real en la página puede abrir otra app o copiar):
+	// en Android, «Abrir en Chrome»; en iPhone, donde ninguna web puede abrir Safari, cómo hacerlo desde el
+	// menú de la red social y «Copiar enlace». first: es el aviso al entrar, que sólo sale una vez.
+	openInBrowser: function (first) {
+		const app = this.inAppBrowser(navigator.userAgent) || 'esta app';
+		const android = /Android/.test(navigator.userAgent);
+		const box = document.getElementById('integrado');
+		const open = document.getElementById('integrado-abrir');
+		const copy = document.getElementById('integrado-copiar');
+		const close = document.getElementById('integrado-cerrar');
+		if (!box) {
+			return false;
+		}
+		const why = 'Estás en el navegador de ' + app + ': aquí no se puede instalar Hilo rojo como app y tus partidas no se guardan con las de tu navegador. ';
+		document.getElementById('integrado-texto').textContent = why + (android
+			? 'Ábrelo en Chrome y, allí, toca «Instalar como app».'
+			: 'Toca el menú ··· de ' + app + ' y elige abrirlo en el navegador externo, o copia el enlace y pégalo en Safari.');
+		open.hidden = !android;
+		open.href = this.chromeIntent();
+		copy.hidden = android;
+		copy.textContent = 'Copiar enlace';
+		const url = this.gameUrl();
+		copy.onclick = function () {
+			const done = function () {
+				copy.textContent = 'Enlace copiado';
+			};
+			const manual = function () {
+				const input = document.createElement('input');
+				input.value = url;
+				document.body.appendChild(input);
+				input.select();
+				try {
+					if (document.execCommand('copy')) {
+						done();
+					}
+				} catch (e) {
+					// Sin portapapeles: el texto ya explica cómo abrirlo.
+				}
+				input.remove();
+			};
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(url).then(done, manual);
+			} else {
+				manual();
+			}
+		};
+		close.onclick = function () {
+			box.style.display = 'none';
+			if (first) {
+				try {
+					localStorage.setItem('hiloRojoAvisoIntegrado', '1');
+				} catch (e) {
+					// Sin almacenamiento, vuelve a salir la próxima vez.
+				}
+			}
+		};
+		box.style.display = 'block';
+		return true;
 	},
 	// Color de la barra del navegador (Android) o de la pestaña (Safari): el de la pantalla en curso.
 	theme: function (hex) {
@@ -434,12 +524,16 @@ window.addEventListener('appinstalled', function () {
 		<div id="integrado" role="status">
 			<strong>Ábrelo en tu navegador</strong>
 			<span id="integrado-texto"></span>
-			<br><button type="button" id="integrado-cerrar">Entendido</button>
+			<div class="acciones">
+				<a id="integrado-abrir" class="principal" href="#" hidden>Abrir en Chrome</a>
+				<button type="button" id="integrado-copiar" class="principal" hidden>Copiar enlace</button>
+				<button type="button" id="integrado-cerrar">Entendido</button>
+			</div>
 		</div>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":30845196,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":30845964,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -538,19 +632,7 @@ const engine = new Engine(GODOT_CONFIG);
 		if (!app || seen) {
 			return;
 		}
-		const box = document.getElementById('integrado');
-		document.getElementById('integrado-texto').textContent = 'Estás en el navegador de ' + app +
-			'. Aquí tus partidas no se guardan con las de tu navegador y no se puede instalar como app. Usa el menú de ' + app +
-			' para abrir Hilo rojo en Chrome o Safari.';
-		box.style.display = 'block';
-		document.getElementById('integrado-cerrar').addEventListener('click', () => {
-			box.style.display = 'none';
-			try {
-				localStorage.setItem('hiloRojoAvisoIntegrado', '1');
-			} catch (e) {
-				// Sin almacenamiento, vuelve a salir la próxima vez.
-			}
-		});
+		window.hiloRojoWeb.openInBrowser(true);
 	}
 
 	// Ya cargado el juego, el service worker guarda en caché el motor y el juego para jugar sin conexión
